@@ -41,6 +41,8 @@ namespace UsersWebApi
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseDeveloperExceptionPage();
+
             app.UseHttpsRedirection();
 
             app.UseRouting();
