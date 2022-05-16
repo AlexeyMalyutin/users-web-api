@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,7 +30,20 @@ namespace UsersWebApi
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "UsersApi", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "UsersApi",
+                    Version = "v1",
+                    Description = "CRUD operations on the User entity",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Малютин Алексей",
+                        Email = "alex.malyutin1301@gmail.com"
+                    }
+                });
+
+                var filePath = Path.Combine(System.AppContext.BaseDirectory, "UsersWebApi.xml");
+                c.IncludeXmlComments(filePath);
             });
         }
 
