@@ -10,12 +10,8 @@ namespace UsersWebApi.Models
     {
         public Guid Guid { get; set; }
 
-        /// <summary>
-        /// User's name
-        /// </summary>
         [Required(ErrorMessage = "Введите логин")]
         [RegularExpression("^[A-Za-z0-9]+$", ErrorMessage = ("Запрещены все символы кроме латинских букв и цифр"))]
-        [Display(Name = "Логин")]
         public string Login { get; set; }
 
         [Required(ErrorMessage = "Введите пароль")]
@@ -31,7 +27,7 @@ namespace UsersWebApi.Models
         public int Gender { get; set; }
 
         [DataType(DataType.Date)]
-        [DisplayFormat(DataFormatString = "{dd'/'MM'/'yyyy}", ApplyFormatInEditMode = true)]
+        //[DisplayFormat(DataFormatString = "{dd'/'MM'/'yyyy}", ApplyFormatInEditMode = true)]
         public DateTime? Birthday { get; set; }
         
         [Required(ErrorMessage = "Укажите будет ли пользователь администратором")]

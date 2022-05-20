@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using UsersWebApi.Repositories;
 
 namespace UsersWebApi
 {
@@ -27,6 +28,7 @@ namespace UsersWebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<IUsersRepository, UsersRepository>();
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {

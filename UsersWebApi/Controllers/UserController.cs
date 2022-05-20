@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using UsersWebApi.Models;
+using UsersWebApi.Repositories;
 
 namespace UsersWebApi.Controllers
 {
@@ -16,19 +16,11 @@ namespace UsersWebApi.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private static List<User> users = new List<User>
+        private readonly IUsersRepository _repository;
+        public UserController(IUsersRepository repository)
         {
-            new User
-            {
-                Guid = Guid.NewGuid(),
-                Login = "Admin",
-                Password = "Admin",
-                Name = "Admin",
-                Gender = 2,
-                Admin = true,
-                CreatedOn = DateTime.Now
-            }
-        };
+            this._repository = repository;
+        }
 
         /// <summary>
         /// Get all active users
@@ -38,21 +30,21 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpGet]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult GetActiveUsers(string login, string password)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetActiveUsers(string login, string password)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
-                return BadRequest();
+                return BadRequest($"Пользователь {login} не является админом");
             }
 
-            return Ok(users.Where(u => u.RevokedOn == null).OrderByDescending(u => u.CreatedOn));
+            return Ok(await _repository.GetActiveUsersAsync(login, password));
         }
 
         /// <summary>
@@ -64,23 +56,26 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpGet("{loginToSearch}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult GetByLogin(string login,string password, string loginToSearch) ///А если такого пользователя не нашлось(((
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetByLogin(string login,string password, string loginToSearch)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if(user==null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if(!user.Admin)
             {
-                return BadRequest();
+                return BadRequest($"Пользователь {login} не является админом");
             }
 
-            var userToFind = users
-                .Where(u => u.Login == loginToSearch) //проверить........логина такого может не быть(
-                .Select(x => new { x.Name, x.Gender, x.Birthday, x.RevokedOn });
+            var userToFind = await _repository.GetByLoginAsync(loginToSearch);
+            if(userToFind==null)
+            {
+                return BadRequest($"Пользователь {loginToSearch} не существует");
+            }
 
             return Ok(userToFind);
         }
@@ -93,18 +88,18 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpGet]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult GetByLoginAndPassword(string login, string password)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetByLoginAndPassword(string login, string password)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if(user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (user.RevokedOn != null)
             {
-                return BadRequest();
+                return BadRequest($"Пользователь {login} не активен");
             }
 
             return Ok(user);
@@ -119,23 +114,21 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpGet]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult GetOlderThanAge(string login, string password, int age)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetOlderThanAge(string login, string password, int age)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (user.RevokedOn != null || age < 0)
             {
-                return BadRequest();
+                return BadRequest("Пользователь не активен или возраст введен некорректно");
             }
 
-            var usersOlderThanAge = users
-                .Where(u => (u.Birthday.HasValue ? u.Birthday.Value : DateTime.MaxValue) < DateTime.Today.AddYears(-age));
-
+            var usersOlderThanAge = await _repository.GetOlderThanAgeAsync(age);
             return Ok(usersOlderThanAge);
         }
 
@@ -144,39 +137,25 @@ namespace UsersWebApi.Controllers
         /// </summary>
         /// <param name="login">Login of the person executing the request</param>
         /// <param name="password">Password of the person executing the request</param>
-        /// <param name="newUser">..............</param>
+        /// <param name="newUser">new user's data</param>
         /// <returns></returns>
         [HttpPost]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        /* string newLogin, string newPassword, string newName, int newGender, DateTime newBirthday, bool isAdmin)
-        [Bind("Login","Password","Name","Gender","Birthday","Admin")]*/
-        public IActionResult CreateNewUser(string login, string password,[FromQuery, Required] User newUser)
+        public async Task<IActionResult> CreateNewUser(string login, string password, User newUser)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
-                return BadRequest();
-            }
-            if(!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
+                return BadRequest($"Пользователь {login} не является админом"); 
             }
 
-            newUser.Guid = Guid.NewGuid();
-            newUser.CreatedBy = login;
-            newUser.CreatedOn = DateTime.Now;
-            newUser.RevokedBy = null;
-            newUser.RevokedOn = null;
-            newUser.ModifiedBy = null;
-            newUser.ModifiedOn = null;
-
-            users.Add(newUser);
+            await Task.FromResult(_repository.CreateNewUserAsync(login, newUser));
             return Created("",newUser);
         }
 
@@ -186,31 +165,33 @@ namespace UsersWebApi.Controllers
         /// <param name="login">Login of the person executing the request</param>
         /// <param name="password">Password of the person executing the request</param>
         /// <param name="loginToFind">Login of the user that we need to find</param>
-        /// <param name="newName">New user's name</param>
-        /// <param name="Gender">New user's gender</param>
-        /// <param name="Birthday">New user's Birthday</param>
+        /// <param name="userData">User to update parameters</param>
         /// <returns></returns>
         [HttpPut("{loginToFind}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult UpdateUserData(string login, string password, string loginToFind, string newName, int? Gender, DateTime? Birthday)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        //string login, string password, string loginToFind, string newName, int? Gender, DateTime? Birthday
+        public async Task<IActionResult> UpdateUserData(string login, string password, string loginToFind, User userData)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
                 if (login != loginToFind || user.RevokedOn != null)
-                    return BadRequest();
+                    return BadRequest("Пароль может менять админ или лично пользователь, если он активен");
             }
 
-            var userToUpdate = users.FirstOrDefault(u => u.Login == loginToFind);
-            if(newName!=null) userToUpdate.Name = newName;
-            if(Gender!=null) userToUpdate.Gender = (int)Gender;
-            if(Birthday!=null) userToUpdate.Birthday = Birthday;
+            var userToUpdate = await _repository.UpdateUserDataAsync(login, loginToFind, userData);
+            if(userToUpdate==null)
+            {
+                return NotFound($"Пользователь {loginToFind} не существует");
+            }
+
             return NoContent();
         }
 
@@ -224,23 +205,29 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpPut("{loginToFind}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult UpdateUserPassword(string login, string password, string loginToFind, string newPassword)
+        public async Task<IActionResult> UpdateUserPassword(string login, string password, string loginToFind, string newPassword)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
                 if (login != loginToFind || user.RevokedOn != null)
-                    return BadRequest();
+                {
+                    return BadRequest("Пароль может менять админ или лично пользователь, если он активен");
+                }
             }
 
-            var userToUpdate = users.FirstOrDefault(u => u.Login == loginToFind);
-            userToUpdate.Password = newPassword;
+            var userToUpdate = await _repository.UpdateUserPasswordAsync(login, loginToFind, newPassword);
+            if (userToUpdate==null)
+            {
+                return NotFound($"Пользователь {loginToFind} не существует");
+            }
+
             return NoContent();
         }
 
@@ -252,25 +239,30 @@ namespace UsersWebApi.Controllers
         /// <param name="loginToFind">Login of the user that we need to find</param>
         /// <param name="newLogin">New user's login</param>
         /// <returns></returns>
-        [HttpPut("{loginToFild}")]
+        [HttpPut("{loginToFind}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult UpdateUserLogin(string login, string password, string loginToFind, string newLogin)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateUserLogin(string login, string password, string loginToFind, string newLogin)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
                 if (login != loginToFind || user.RevokedOn != null)
-                    return BadRequest();
+                    return BadRequest("Логин может менять админ или лично пользователь, если он активен");
             }
 
-            var userToUpdate = users.FirstOrDefault(u => u.Login == loginToFind);
-            userToUpdate.Login = newLogin;
+            var userToUpdate = await _repository.UpdateUserLoginAsync(login, loginToFind, newLogin);
+            if (userToUpdate==null)
+            {
+                return NotFound($"Пользователь {loginToFind} не существует");
+            }
+
             return NoContent();
         }
 
@@ -283,23 +275,27 @@ namespace UsersWebApi.Controllers
         /// <returns></returns>
         [HttpPut("{loginToFind}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult RecoverUser(string login, string password, string loginToFind)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RecoverUser(string login, string password, string loginToFind)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
-                return BadRequest();
+                return BadRequest($"Пользователь {login} не является админом");
             }
 
-            var userToRecover = users.FirstOrDefault(u => u.Login == loginToFind);
-            userToRecover.RevokedOn = null;
-            userToRecover.RevokedBy = null;
+            var userToRecover = await _repository.RecoverUserAsync(login, loginToFind);
+            if (userToRecover==null)
+            {
+                return NotFound($"Пользователь {loginToFind} не существует");
+            }
+
             return NoContent();
         }
 
@@ -309,64 +305,31 @@ namespace UsersWebApi.Controllers
         /// <param name="login">Login of the person executing the request</param>
         /// <param name="password">Password of the person executing the request</param>
         /// <param name="loginToDelete">Login of the user that we need to find and delete</param>
-        /// <returns></returns>
-        [HttpDelete("{loginToDelete}")]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult DeleteSoftly(string login, string password, string loginToDelete)
-        {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            if (!user.Admin)
-            {
-                return BadRequest();
-            }
-
-            var userToDelete = users.FirstOrDefault(u => u.Login == loginToDelete);
-            if(userToDelete==null)
-            {
-                return BadRequest();
-            }
-
-            userToDelete.RevokedOn = DateTime.Now;
-            userToDelete.RevokedBy = login;
-            return Ok(users);
-        }
-
-        /// <summary>
-        /// Delete the user
-        /// </summary>
-        /// <param name="login">Login of the person executing the request</param>
-        /// <param name="password">Password of the person executing the request</param>
-        /// <param name="loginToDelete">Login of the user that we need to find and delete</param>
+        /// <param name="isSoft">Parameter that specifies how to delete the user (softly or completely)</param>
         /// <returns></returns>
         [HttpDelete("{loginToDelete}")]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-        public IActionResult DeleteCompletely(string login, string password, string loginToDelete)
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteUser(string login, string password, string loginToDelete, bool isSoft)
         {
-            var user = users.FirstOrDefault(u => u.Login == login && u.Password == password);
+            var user = await _repository.GetByLoginAndPasswordAsync(login, password);
             if (user == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
             if (!user.Admin)
             {
-                return BadRequest();
+                return BadRequest($"Пользователь {login} не является админом");
             }
-
-            var userToDelete = users.FirstOrDefault(u => u.Login == loginToDelete);
-            if (userToDelete == null)
+            
+            var userToDelete = await _repository.DeleteUserAsync(login, loginToDelete, isSoft);
+            if(userToDelete==null)
             {
-                return BadRequest();
+                return NotFound($"Пользователь {loginToDelete} не существует");
             }
-
-            users.Remove(userToDelete);
+            
             return NoContent();
         }
     }

@@ -49,19 +49,17 @@
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
-            <param name="newUser">..............</param>
+            <param name="newUser">new user's data</param>
             <returns></returns>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.UpdateUserData(System.String,System.String,System.String,System.String,System.Nullable{System.Int32},System.Nullable{System.DateTime})">
+        <member name="M:UsersWebApi.Controllers.UserController.UpdateUserData(System.String,System.String,System.String,UsersWebApi.Models.User)">
             <summary>
             Update user's name, gender or birthday
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="loginToFind">Login of the user that we need to find</param>
-            <param name="newName">New user's name</param>
-            <param name="Gender">New user's gender</param>
-            <param name="Birthday">New user's Birthday</param>
+            <param name="userData">User to update parameters</param>
             <returns></returns>
         </member>
         <member name="M:UsersWebApi.Controllers.UserController.UpdateUserPassword(System.String,System.String,System.String,System.String)">
@@ -93,28 +91,15 @@
             <param name="loginToFind">Login of the user that we need to find</param>
             <returns></returns>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.DeleteSoftly(System.String,System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UserController.DeleteUser(System.String,System.String,System.String,System.Boolean)">
             <summary>
             Delete the user softly (change his activity)
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="loginToDelete">Login of the user that we need to find and delete</param>
+            <param name="isSoft">Parameter that specifies how to delete the user (softly or completely)</param>
             <returns></returns>
-        </member>
-        <member name="M:UsersWebApi.Controllers.UserController.DeleteCompletely(System.String,System.String,System.String)">
-            <summary>
-            Delete the user
-            </summary>
-            <param name="login">Login of the person executing the request</param>
-            <param name="password">Password of the person executing the request</param>
-            <param name="loginToDelete">Login of the user that we need to find and delete</param>
-            <returns></returns>
-        </member>
-        <member name="P:UsersWebApi.Models.User.Login">
-            <summary>
-            User's name
-            </summary>
         </member>
     </members>
 </doc>
