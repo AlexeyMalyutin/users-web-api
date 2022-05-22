@@ -4,55 +4,66 @@
         <name>UsersWebApi</name>
     </assembly>
     <members>
-        <member name="T:UsersWebApi.Controllers.UserController">
+        <member name="T:UsersWebApi.Controllers.UsersController">
             <summary>
             Controller to perfoms CRUD operation on the user entity
             </summary>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.GetActiveUsers(System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.GetActiveUsers(System.String,System.String)">
             <summary>
             Get all active users
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
-            <returns></returns>
+            <response code="200">Return all active users. Possible to return an empty list</response>
+            <response code="400">Person executing the request is not admin</response>
+            <response code="401">Person executing the request is unauthorized</response>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.GetByLogin(System.String,System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.GetByLogin(System.String,System.String,System.String)">
             <summary>
             Get user by his login
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="loginToSearch">Login of the user that we need to find</param>
-            <returns></returns>
+            <response code="200">Return user</response>
+            <response code="400">Person executing the request is not admin</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.GetByLoginAndPassword(System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.GetByLoginAndPassword(System.String,System.String)">
             <summary>
             Get user by his login and password
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
-            <returns></returns>
+            <response code="200">Return user</response>
+            <response code="400">User is not active</response>
+            <response code="401">Person executing the request is unauthorized</response>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.GetOlderThanAge(System.String,System.String,System.Int32)">
+        <member name="M:UsersWebApi.Controllers.UsersController.GetOlderThanAge(System.String,System.String,System.Int32)">
             <summary>
             Get users who are older than a specific age
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="age">specific age</param>
-            <returns></returns>
+            <response code="200">Return users which older than age. Possible to return an empty list</response>
+            <response code="400">User in not active or input age is incorrected</response>
+            <response code="401">Person executing the request is unauthorized</response>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.CreateNewUser(System.String,System.String,UsersWebApi.Models.User)">
+        <member name="M:UsersWebApi.Controllers.UsersController.CreateNewUser(System.String,System.String,UsersWebApi.DTO.UsersCreateDTO)">
             <summary>
             Create a new user
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="newUser">new user's data</param>
-            <returns></returns>
+            <response code="201">Creates user</response>
+            <response code="400">Person executing the request is not admin or new login is already taken</response>
+            <response code="401">Person executing the request is unauthorized</response>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.UpdateUserData(System.String,System.String,System.String,UsersWebApi.Models.User)">
+        <member name="M:UsersWebApi.Controllers.UsersController.UpdateUserData(System.String,System.String,System.String,UsersWebApi.DTO.UsersUpdateDTO)">
             <summary>
             Update user's name, gender or birthday
             </summary>
@@ -60,9 +71,12 @@
             <param name="password">Password of the person executing the request</param>
             <param name="loginToFind">Login of the user that we need to find</param>
             <param name="userData">User to update parameters</param>
-            <returns></returns>
+            <response code="204">Updates user</response>
+            <response code="400">Person executing the request is not admin or not active</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.UpdateUserPassword(System.String,System.String,System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.UpdateUserPassword(System.String,System.String,System.String,System.String)">
             <summary>
             Update user's password
             </summary>
@@ -70,9 +84,13 @@
             <param name="password">Password of the person executing the request</param>
             <param name="loginToFind">Login of the user that we need to find</param>
             <param name="newPassword">new user's password</param>
-            <returns></returns>
+            <response code="204">Updates user's password</response>
+            <response code="400">Person executing the request is not admin or not active 
+            or unable to change password due to error validation</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.UpdateUserLogin(System.String,System.String,System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.UpdateUserLogin(System.String,System.String,System.String,System.String)">
             <summary>
             Update user's login
             </summary>
@@ -80,18 +98,25 @@
             <param name="password">Password of the person executing the request</param>
             <param name="loginToFind">Login of the user that we need to find</param>
             <param name="newLogin">New user's login</param>
-            <returns></returns>
+            <response code="204">Updates user's login</response>
+            <response code="400">Person executing the request is not admin or is not active
+            or unable to change login due to validation error or the login is already taken</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.RecoverUser(System.String,System.String,System.String)">
+        <member name="M:UsersWebApi.Controllers.UsersController.RecoverUser(System.String,System.String,System.String)">
             <summary>
             Recover user's activity after soft deletion
             </summary>
             <param name="login">Login of the person executing the request</param>
             <param name="password">Password of the person executing the request</param>
             <param name="loginToFind">Login of the user that we need to find</param>
-            <returns></returns>
+            <response code="204">Makes the user active</response>
+            <response code="400">Person executing the request is not admin</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
-        <member name="M:UsersWebApi.Controllers.UserController.DeleteUser(System.String,System.String,System.String,System.Boolean)">
+        <member name="M:UsersWebApi.Controllers.UsersController.DeleteUser(System.String,System.String,System.String,System.Boolean)">
             <summary>
             Delete the user softly (change his activity)
             </summary>
@@ -99,7 +124,10 @@
             <param name="password">Password of the person executing the request</param>
             <param name="loginToDelete">Login of the user that we need to find and delete</param>
             <param name="isSoft">Parameter that specifies how to delete the user (softly or completely)</param>
-            <returns></returns>
+            <response code="204">Deletes user softly or completely</response>
+            <response code="400">Person executing the request is not admin</response>
+            <response code="401">Person executing the request is unauthorized</response>
+            <respone code="404">User does not exist</respone>
         </member>
     </members>
 </doc>

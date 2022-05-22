@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using UsersWebApi.DTO;
 using UsersWebApi.Models;
@@ -10,15 +7,16 @@ namespace UsersWebApi.Repositories
 {
     public interface IUsersRepository
     {
-        Task CreateNewUserAsync(string login, User user);
-        Task<User> UpdateUserDataAsync(string login, string loginToFind, User userData);
-        Task<User> UpdateUserPasswordAsync(string login, string loginToFind, string newPassword);
-        Task<User> UpdateUserLoginAsync(string login, string loginToFind, string newLogin);
-        Task<IEnumerable<User>> GetActiveUsersAsync(string login, string password);
+        Task<IEnumerable<Users>> GetAll();
+        Task CreateNewUserAsync(string login, UsersCreateDTO user);
+        Task<Users> UpdateUserDataAsync(string login, string loginToFind, UsersUpdateDTO userData);
+        Task<Users> UpdateUserPasswordAsync(string login, string loginToFind, string newPassword);
+        Task<Users> UpdateUserLoginAsync(string login, string loginToFind, string newLogin);
+        Task<IEnumerable<Users>> GetActiveUsersAsync(string login, string password);
         Task<UsersDTO> GetByLoginAsync(string loginToSearch);
-        Task<User> GetByLoginAndPasswordAsync(string login, string password);
-        Task<IEnumerable<User>> GetOlderThanAgeAsync(int age);
-        Task<User> DeleteUserAsync(string login, string loginToDelete, bool isSoft);
-        Task<User> RecoverUserAsync(string login, string loginToFind);
+        Task<Users> GetByLoginAndPasswordAsync(string login, string password);
+        Task<IEnumerable<Users>> GetOlderThanAgeAsync(int age);
+        Task<Users> DeleteUserAsync(string login, string loginToDelete, bool isSoft);
+        Task<Users> RecoverUserAsync(string login, string loginToFind);
     }
 }

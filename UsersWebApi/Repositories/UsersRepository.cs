@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,9 +9,9 @@ namespace UsersWebApi.Repositories
 {
     public class UsersRepository : IUsersRepository
     {
-        private readonly List<User> users = new List<User>
+        private readonly List<Users> users = new List<Users>
         {
-            new User
+            new Users
             {
                 Guid = Guid.NewGuid(),
                 Login = "Admin",
@@ -23,21 +22,31 @@ namespace UsersWebApi.Repositories
                 CreatedOn = DateTime.Now
             }
         };
-        public async Task CreateNewUserAsync(string login, User newUser)
+        public async Task CreateNewUserAsync(string login, UsersCreateDTO newUser)
         {
-            newUser.Guid = Guid.NewGuid();
-            newUser.CreatedBy = login;
-            newUser.CreatedOn = DateTime.Now;
-            newUser.RevokedBy = null;
-            newUser.RevokedOn = null;
-            newUser.ModifiedBy = null;
-            newUser.ModifiedOn = null;
-            users.Add(newUser);
+            Users userToCreate = new Users
+            {
+                Login = newUser.Login,
+                Password = newUser.Password,
+                Name = newUser.Name,
+                Gender = newUser.Gender,
+                Birthday = newUser.Birthday,
+                Admin = newUser.Admin,
+                Guid = Guid.NewGuid(),
+                CreatedBy = login,
+                CreatedOn = DateTime.Now,
+                RevokedBy = null,
+                RevokedOn = null,
+                ModifiedBy = null,
+                ModifiedOn = null
+            };
+
+            users.Add(userToCreate);
 
             await Task.CompletedTask;
         }
 
-        public async Task<User> DeleteUserAsync(string login, string loginToDelete, bool isSoft)
+        public async Task<Users> DeleteUserAsync(string login, string loginToDelete, bool isSoft)
         {
             var userToDelete = await Task.FromResult(users.FirstOrDefault(u => u.Login == loginToDelete));
             if (userToDelete != null)
@@ -56,7 +65,7 @@ namespace UsersWebApi.Repositories
             return userToDelete;
         }
 
-        public async Task<IEnumerable<User>> GetActiveUsersAsync(string login, string password)
+        public async Task<IEnumerable<Users>> GetActiveUsersAsync(string login, string password)
         {
             var activeUsers = await Task.FromResult(users
                 .Where(u => u.RevokedOn == null)
@@ -65,7 +74,12 @@ namespace UsersWebApi.Repositories
             return activeUsers;
         }
 
-        public async Task<User> GetByLoginAndPasswordAsync(string login, string password)
+        public async Task<IEnumerable<Users>> GetAll()
+        {
+            return await Task.FromResult(users);
+        }
+
+        public async Task<Users> GetByLoginAndPasswordAsync(string login, string password)
         {
             var user = await Task.FromResult(users.
                 FirstOrDefault(u => u.Login == login && u.Password == password));
@@ -88,7 +102,7 @@ namespace UsersWebApi.Repositories
             return userToFind;
         }
 
-        public async Task<IEnumerable<User>> GetOlderThanAgeAsync(int age)
+        public async Task<IEnumerable<Users>> GetOlderThanAgeAsync(int age)
         {
             var usersOlderThanAge = await Task.FromResult(users
                 .Where(u => (u.Birthday.HasValue ? u.Birthday.Value : DateTime.MaxValue) < DateTime.Today.AddYears(-age)));
@@ -96,7 +110,7 @@ namespace UsersWebApi.Repositories
             return usersOlderThanAge;
         }
 
-        public async Task<User> RecoverUserAsync(string login, string loginToFind)
+        public async Task<Users> RecoverUserAsync(string login, string loginToFind)
         {
             var userToRecover = await Task.FromResult(users.FirstOrDefault(u => u.Login == loginToFind));
             if (userToRecover != null)
@@ -110,14 +124,14 @@ namespace UsersWebApi.Repositories
             return userToRecover;
         }
 
-        public async Task<User> UpdateUserDataAsync(string login, string loginToFind, User userData)
+        public async Task<Users> UpdateUserDataAsync(string login, string loginToFind, UsersUpdateDTO userData)
         {
             var userToUpdate = await Task.FromResult(users.FirstOrDefault(u => u.Login == loginToFind));
             if (userToUpdate != null)
             {
-                userToUpdate.Name = userData.Name;
-                userToUpdate.Gender = userData.Gender;
-                userToUpdate.Birthday = userData.Birthday;
+                if(userData.Name!=null) userToUpdate.Name = userData.Name;
+                if (userData.Gender != null) userToUpdate.Gender = (int)userData.Gender;
+                if (userData.Birthday != null) userToUpdate.Birthday = userData.Birthday;
                 userToUpdate.ModifiedBy = login;
                 userToUpdate.ModifiedOn = DateTime.Now;
             }
@@ -125,7 +139,7 @@ namespace UsersWebApi.Repositories
             return userToUpdate;
         }
 
-        public async Task<User> UpdateUserLoginAsync(string login, string loginToFind, string newLogin)
+        public async Task<Users> UpdateUserLoginAsync(string login, string loginToFind, string newLogin)
         {
             var userToUpdate = await Task.FromResult(users.FirstOrDefault(u => u.Login == loginToFind));
             if (userToUpdate != null)
@@ -138,7 +152,7 @@ namespace UsersWebApi.Repositories
             return userToUpdate;
         }
 
-        public async Task<User> UpdateUserPasswordAsync(string login, string loginToFind, string newPassword)
+        public async Task<Users> UpdateUserPasswordAsync(string login, string loginToFind, string newPassword)
         {
             var userToUpdate = await Task.FromResult(users.FirstOrDefault(u => u.Login == loginToFind));
             if (userToUpdate != null)
